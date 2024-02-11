@@ -14,7 +14,7 @@ var char = document.getElementById("char");
 
 function init() {
     addEventListener("keydown", keyDownHandler);
-    addEventListener("keyup", keyUpHandler)
+    addEventListener("keyup", keyUpHandler);
     window.requestAnimationFrame(drawFrame);
 }
 
@@ -22,13 +22,13 @@ function keyDownHandler(e) {
     if (e.key === "s") {
         keysDown.s = true;
     }
-    if (e.key === "w") {
+    else if (e.key === "w") {
         keysDown.w = true;
     }
-    if (e.key === "d") {
+    else if (e.key === "d") {
         keysDown.d = true;
     }
-    if (e.key === "a") {
+    else if (e.key === "a") {
         keysDown.a = true;
     }
 }
@@ -37,13 +37,13 @@ function keyUpHandler(e) {
     if (e.key === "s") {
         keysDown.s = false;
     }
-    if (e.key === "w") {
+    else if (e.key === "w") {
         keysDown.w = false;
     }
-    if (e.key === "d") {
+    else if (e.key === "d") {
         keysDown.d = false;
     }
-    if (e.key === "a") {
+    else if (e.key === "a") {
         keysDown.a = false;
     }
 }
