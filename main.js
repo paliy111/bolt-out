@@ -67,9 +67,17 @@ function drawFrame() {
     } else {
         vy = 0;
     }
-
     x += vx;
     y += vy;
+    if (x < 0 || x + char.width > 1280) {
+        x -= vx;
+        vx = 0;
+    }
+
+    if (y < 0 || y + char.height > 720) {
+        y -= vy;
+        vy = 0;
+    }
 
     window.requestAnimationFrame(drawFrame);
 }
