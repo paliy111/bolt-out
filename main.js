@@ -3,6 +3,7 @@ var x = 0;
 var y = 0;
 var vx = 0;
 var vy = 0;
+const gravity = 1;
 
 var keysDown = {
     a: false,
@@ -53,20 +54,14 @@ function drawFrame() {
     ctx.clearRect(0, 0, 1280, 720);
     ctx.drawImage(char, x, y);
     if (keysDown.a) {
-        vx = -2;
+        vx = -3;
     } else if (keysDown.d) {
-        vx = 2;
+        vx = 3;
     } else {
         vx = 0;
     }
-
-    if (keysDown.w) {
-        vy = -2;
-    } else if (keysDown.s) {
-        vy = 2;
-    } else {
-        vy = 0;
-    }
+	
+	vy += gravity;
     x += vx;
     y += vy;
     if (x < 0 || x + char.width > 1280) {
@@ -77,6 +72,9 @@ function drawFrame() {
     if (y < 0 || y + char.height > 720) {
         y -= vy;
         vy = 0;
+		if (keysDown.w) {
+        vy = -20;
+		}
     }
 
     window.requestAnimationFrame(drawFrame);
