@@ -71,6 +71,12 @@ class Player extends GameObject {
 		this.yRemainder = 0;
 		this.ground_hitbox = new GameObject("", 32, 8);
 		this.grounded = false;
+		this.animatonCanvas = document.createElement("canvas");
+		this.animatonCanvas.width = this.w;
+		this.animatonCanvas.height = this.h;
+		this.animationFrame = 0;
+		this.animationDelay = 10;
+		this.animationDelayCounter = 0;
 	}
 	
 	update(blocks) {
@@ -107,7 +113,7 @@ class Player extends GameObject {
 		}
 	}
 	
-	moveY(distance) {
+	moveY(distance) { // repetitive code :(
 		this.yRemainder += distance;
 		var intMove = Math.round(this.yRemainder);
 		this.yRemainder -= intMove;
@@ -128,8 +134,21 @@ class Player extends GameObject {
 	}
 	
 	draw(ctx) {
-		super.draw(ctx);
+		// super.draw(ctx);
 		this.ground_hitbox.drawHitbox(ctx);
+		var animationCtx = this.animatonCanvas.getContext("2d");
+		animationCtx.clearRect(0, 0, 32, 64);
+		animationCtx.drawImage(this.img, 0, -this.animationFrame * 66);
+		ctx.drawImage(this.animatonCanvas, this.x, this.y);
+		this.drawHitbox(ctx);
+		this.animationDelayCounter++;
+		if (this.animationDelayCounter >= this.animationDelay) { // animation advancer 
+			this.animationDelayCounter = 0;
+			this.animationFrame++;
+			if (this.animationFrame >= 3) {
+				this.animationFrame = 0;
+			}
+		}
 	}
 }
 
