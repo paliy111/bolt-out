@@ -31,6 +31,10 @@ class GameObject {
 		this.y + this.h > other.y)
 	}
 	
+	onColide() {
+		return;
+	}
+	
 	moveTo(x, y) {
 		this.x = x;
 		this.y = y;
@@ -46,9 +50,20 @@ class GameObject {
 	}
 }
 
+class Spike extends GameObject {
+	onColide() {
+		console.log("died");
+	}
+	
+	draw(ctx) {
+		ctx.fillStyle = "red";
+		ctx.fillRect(this.x, this.y, this.w, this.h);
+	}
+}
+
 class Player extends GameObject {
 	constructor() {
-		super("Images/char.png", 32, 64);
+		super("Images/char2.png", 32, 64);
 		this.dx = 0;
 		this.dy = 0;
 		this.ay = 0;
@@ -83,7 +98,9 @@ class Player extends GameObject {
 			for (var i = 0; i < blocks.length; i++) {
 				if (this.colides(blocks[i])) {
 					this.x -= direction;
+					this.dx = 0;
 					this.colided = true;
+					blocks[i].onColide();
 					return;
 				}
 			}
@@ -101,7 +118,9 @@ class Player extends GameObject {
 			for (var i = 0; i < blocks.length; i++) {
 				if (this.colides(blocks[i])) {
 					this.y -= direction;
+					this.dy = 0;
 					this.colided = true;
+					blocks[i].onColide();
 					return;
 				}
 			}
@@ -119,8 +138,11 @@ class Player extends GameObject {
 function init() {
 	char = new Player();
 	var block = new GameObject("Images/char.png", 16, 16);
+	var spoik = new Spike("", 16, 16);
 	blocks.push(block);
+	blocks.push(spoik);
 	block.moveTo(600, 600);
+	spoik.moveTo(800, 650);
     addEventListener("keydown", keyDownHandler);
     addEventListener("keyup", keyUpHandler);
     window.requestAnimationFrame(drawFrame);
@@ -205,7 +227,6 @@ function drawFrame() {
     char.update(blocks);
 	if (char.grounded) {
 		char.ay = 0;
-		char.dy = 0;
 	} else {
 		char.ay = gravity;
 	}
