@@ -77,6 +77,7 @@ class Player extends GameObject {
 		this.animationFrame = 0;
 		this.animationDelay = 10;
 		this.animationDelayCounter = 0;
+		this.mirror = false;
 	}
 	
 	update(blocks) {
@@ -138,9 +139,20 @@ class Player extends GameObject {
 		this.ground_hitbox.drawHitbox(ctx);
 		var animationCtx = this.animatonCanvas.getContext("2d");
 		animationCtx.clearRect(0, 0, 32, 64);
+		if (this.mirror) {
+			animationCtx.save();
+			animationCtx.scale(-1, 1);
+			animationCtx.drawImage(this.img, -32, -this.animationFrame * 66);
+			animationCtx.restore();
+
+		} else {
 		animationCtx.drawImage(this.img, 0, -this.animationFrame * 66);
+		}
+		
 		ctx.drawImage(this.animatonCanvas, this.x, this.y);
 		this.drawHitbox(ctx);
+
+
 		this.animationDelayCounter++;
 		if (this.animationDelayCounter >= this.animationDelay) { // animation advancer 
 			this.animationDelayCounter = 0;
