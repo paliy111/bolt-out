@@ -12,6 +12,8 @@ var keysDown = {
     d: false,
 };
 
+var backgroundFrame = 0;
+
 class GameObject {
 	constructor(src, w, h) {
 		this.img = new Image();
@@ -139,6 +141,11 @@ class Player extends GameObject {
 		this.ground_hitbox.drawHitbox(ctx);
 		var animationCtx = this.animatonCanvas.getContext("2d");
 		animationCtx.clearRect(0, 0, 32, 64);
+
+        if (this.dx == 0) {
+            this.animationFrame = 0;
+        }
+
 		if (this.mirror) {
 			animationCtx.save();
 			animationCtx.scale(-1, 1);
@@ -176,7 +183,11 @@ function init() {
 	spoik.moveTo(800, 650);
     addEventListener("keydown", keyDownHandler);
     addEventListener("keyup", keyUpHandler);
-    window.requestAnimationFrame(drawFrame);
+    var canvas = document.getElementById("game");
+    var background = document.getElementById("background");
+    var backgroundImage = document.getElementById("backgroundImage");
+    setInterval(drawFrame, 17, canvas); // ~60 fps
+    setInterval(drawBackground, 500, background, backgroundImage);
 }
 
 function keyDownHandler(e) {
@@ -237,8 +248,16 @@ function keyUpHandler(e) {
 	}
 }
 
-function drawFrame() {
-    ctx = document.getElementById("cvs").getContext("2d");
+function drawBackground(background, backgroundImage) {
+    background.getContext("2d").drawImage(backgroundImage, 0, -722 * backgroundFrame);
+    backgroundFrame++;
+    if (backgroundFrame > 1) {
+        backgroundFrame = 0;
+    }
+}
+
+function drawFrame(canvas) {
+    ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, 1280, 720);
     char.draw(ctx);
 	for (var i = 0; i < blocks.length; i++) {
@@ -246,8 +265,10 @@ function drawFrame() {
 	}
     if (keysDown.a) {
         char.dx = -3;
+        char.mirror = true;
     } else if (keysDown.d) {
         char.dx = 3;
+        char.mirror = false;
     } else {
         char.dx = 0;
     }
@@ -280,5 +301,4 @@ function drawFrame() {
 		}
     }
 
-    window.requestAnimationFrame(drawFrame);
 }
