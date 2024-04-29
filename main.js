@@ -1,9 +1,14 @@
-// JavaScript source code
 const gravity = 0.8;
 
 var char;
 
-var blocks = new Array();
+var blocks = new Array(); // for collision and rendering check
+// all blocks should be referenced here and in the level array
+var level = new Array(80);
+for (var i = 0; i < level.length; i++) {
+    level[i] = new Array(45);
+}
+console.log(level);
 
 var keysDown = {
     a: false,
@@ -15,172 +20,336 @@ var keysDown = {
 var backgroundFrame = 0;
 
 class GameObject {
-	constructor(src, w, h) {
-		this.img = new Image();
-		this.img.src = src;
-		this.img.width = w;
-		this.img.height = h;
-		this.h = h;
-		this.w = w;
-		this.x = 0;
-		this.y = 0;
-	}
-	
-	colides(other) {
-		return (this.x < other.x + other.w &&
-		this.x + this.w > other.x &&
-		this.y < other.y + other.h &&
-		this.y + this.h > other.y)
-	}
-	
-	onColide() {
-		return;
-	}
-	
-	moveTo(x, y) {
-		this.x = x;
-		this.y = y;
-	}
-	
-	draw(ctx) {
-		ctx.drawImage(this.img, this.x, this.y, this.w, this.h);
-	}
-	
-	drawHitbox(ctx) {
-		ctx.strokeStyle = "red";
-		ctx.strokeRect(this.x, this.y, this.w, this.h);
-	}
+    constructor(src, w, h) {
+        this.img = new Image();
+        this.img.src = src;
+        this.img.width = w;
+        this.img.height = h;
+        this.animationCanvas = document.createElement("canvas");
+        this.animationCanvas.width = w;
+        this.animationCanvas.height = h;
+        this.animationCanvas.getContext("2d").drawImage(this.img, 0, 0);
+        this.h = h;
+        this.w = w;
+        this.x = 0;
+        this.y = 0;
+    }
+
+    colides(other) {
+        return (this.x < other.x + other.w &&
+            this.x + this.w > other.x &&
+            this.y < other.y + other.h &&
+            this.y + this.h > other.y)
+    }
+
+    onColide() {
+        return;
+    }
+
+    moveTo(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    draw(ctx) {
+        ctx.drawImage(this.animationCanvas, this.x, this.y)
+    }
+
+ 
+    drawHitbox(ctx) {
+        ctx.strokeStyle = "red";
+        ctx.strokeRect(this.x, this.y, this.w, this.h);
+    }
+}
+
+class StandartTile extends GameObject {
+    constructor(x, y) {
+        super("Images/tile.png", 16, 16);
+        this.moveTo(x * 16, y * 16);
+        this.blocksIndex = blocks.push(this) - 1;
+        level[x][y] = this;
+        document.body.appendChild(this.animationCanvas);
+        this.animationCanvas.style = "z-index: 4";
+        this.exposedBlocks = 0; // using this as a flag integer 0b0000 0000
+                                // bit 0 is topleft, 1-top, 2- topright, 3-left, 4-right, 5-bottomleft, 6-bottom, 7-bottomright
+        this.texturePosition = [];
+        this.initAdjacent(x, y, false);
+        this.texturePosition = this.getTexturePosition();
+        this.changeToTexture(...this.texturePosition);
+    }
+
+    initAdjacent(x, y, toDelete) {
+        var mask = 1;
+        var res = 0;
+        var counter = 0;
+        for (var i = -1; i <= 1; i++) {
+            for (var j = -1; j <= 1; j++) {
+                var block = level[x + j][y + i];
+                if (i == 0 && j == 0)
+                    continue;
+                if (block) {
+                    res |= mask;
+                    block.setAdjacent(7 - counter, toDelete);
+                }
+                mask <<= 1;
+                counter++;
+            }
+        }
+        console.log(this.x, this.y, "got", ~res & 255);
+        this.exposedBlocks = ~res & 255;
+    }
+
+    setAdjacent(position, toDelete) {
+        console.log(this, this.exposedBlocks);
+        var mask = 1 << position;
+        if (toDelete) {
+            this.exposedBlocks |= mask; 
+        } else {
+            this.exposedBlocks &= ~mask;
+        }
+        this.exposedBlocks &= 255
+        console.log(this.exposedBlocks);
+        this.texturePosition = this.getTexturePosition();
+        this.changeToTexture(...this.texturePosition);
+    }
+
+    getTexturePosition() {
+        var x = this.exposedBlocks;
+        var y = x & 90;
+        var res = [3, 3];
+        if (y == 0)
+            res = [1, 1];
+        else if (y == 2)
+            res = [1, 0];
+        else if (y == 8)
+            res = [0, 1];
+        else if (y === 10)
+            res = [0, 0];
+        else if (y == 16)
+            res = [2, 1];
+        else if (y == 18)
+            res = [2, 0];
+        else if (y == 24)
+            res = [3, 1];
+        else if (y == 26)
+            res = [3, 0];
+        else if (y == 64)
+            res = [1, 2];
+        else if (y == 66)
+            res = [1, 3];
+        else if (y == 72)
+            res = [0, 2];
+        else if (y == 74)
+            res = [0, 3];
+        else if (y == 80)
+            res = [2, 2];
+        else if (y == 82)
+            res = [2, 3];
+        else if (y == 88)
+            res = [3, 2];
+        else if (y == 90)
+            res = [3, 3]
+        if (x == 1)
+            res = [5, 1];
+        else if (x == 4)
+            res = [4, 1];
+        else if (x == 5)
+            res = [9, 1];
+        else if (x == 12)
+            res = [6, 3];
+        else if (x == 17)
+            res = [9, 3];
+        else if (x == 32)
+            res = [5, 0];
+        else if (x == 33)
+            res = [9, 0];
+        else if (x == 34)
+            res = [9, 2];
+        else if (x == 37)
+            res = [11, 1];
+        else if (x == 48)
+            res = [7, 2];
+        else if (x == 49)
+            res = [7, 0];
+        else if (x == 50)
+            res = [5, 2];
+        else if (x == 65)
+            res = [7, 3];
+        else if (x == 68)
+            res = [8, 3];
+        else if (x == 69)
+            res = [7, 1];
+        else if (x == 76)
+            res = [4, 3];
+        else if (x == 81)
+            res = [5, 3];
+        else if (x == 128)
+            res = [4, 0];
+        else if (x == 130)
+            res = [6, 2];
+        return res
+    }       
+
+    changeToTexture(i, j) {
+        console.log(this.x, this.y, "changing to", i, j, this.exposedBlocks);
+        var ctx = this.animationCanvas.getContext("2d");
+        ctx.clearRect(0, 0, this.w, this.h)
+        ctx.drawImage(this.img, -16 * i, -16 * j);
+
+    }
+
+    deleteFromArrays() {
+        var x = this.x / 16;
+        var y = this.y / 16;
+        level[x][y] = null;
+        this.initAdjacent(x, y, true);
+        blocks.splice(this.blocksIndex, 1);
+
+    }
+    draw(ctx) {
+  /*      var aCtx = this.animationCanvas.getContext("2d");
+        ctx.drawImage(this.animationCanvas, this.x, this.y);*/
+        super.draw(ctx)
+    }
 }
 
 class Spike extends GameObject {
-	onColide() {
-		console.log("died");
-	}
-	
-	draw(ctx) {
-		ctx.fillStyle = "red";
-		ctx.fillRect(this.x, this.y, this.w, this.h);
-	}
+    onColide() {
+        console.log("died");
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = "red";
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+    }
 }
 
 class Player extends GameObject {
-	constructor() {
-		super("Images/char2.png", 32, 64);
-		this.dx = 0;
-		this.dy = 0;
-		this.ay = 0;
-		this.xRemainder = 0;
-		this.yRemainder = 0;
-		this.ground_hitbox = new GameObject("", 32, 8);
-		this.grounded = false;
-		this.animatonCanvas = document.createElement("canvas");
-		this.animatonCanvas.width = this.w;
-		this.animatonCanvas.height = this.h;
-		this.animationFrame = 0;
-		this.animationDelay = 10;
-		this.animationDelayCounter = 0;
-		this.mirror = false;
-	}
-	
-	update(blocks) {
-		this.colided = false;
-		this.moveX(this.dx); // changes this.colided
-		this.moveY(this.dy);
-		this.ground_hitbox.moveTo(this.x, this.y + 60);
-		this.grounded = false;
-		for (var i = 0; i < blocks.length; i++) {
-			if (this.ground_hitbox.colides(blocks[i])){
-				this.grounded = true;
-				break;
-			}
-		}
-	}
-	
-	moveX(distance) {
-		this.xRemainder += distance;
-		var intMove = Math.round(this.xRemainder);
-		this.xRemainder -= intMove;
-		var direction = Math.sign(intMove);
-		while(intMove != 0) {
-			this.x += direction;
-			intMove -= direction;
-			for (var i = 0; i < blocks.length; i++) {
-				if (this.colides(blocks[i])) {
-					this.x -= direction;
-					this.dx = 0;
-					this.colided = true;
-					blocks[i].onColide();
-					return;
-				}
-			}
-		}
-	}
-	
-	moveY(distance) { // repetitive code :(
-		this.yRemainder += distance;
-		var intMove = Math.round(this.yRemainder);
-		this.yRemainder -= intMove;
-		var direction = Math.sign(intMove);
-		while(intMove != 0) {
-			this.y += direction;
-			intMove -= direction;
-			for (var i = 0; i < blocks.length; i++) {
-				if (this.colides(blocks[i])) {
-					this.y -= direction;
-					this.dy = 0;
-					this.colided = true;
-					blocks[i].onColide();
-					return;
-				}
-			}
-		}
-	}
-	
-	draw(ctx) {
-		// super.draw(ctx);
-		this.ground_hitbox.drawHitbox(ctx);
-		var animationCtx = this.animatonCanvas.getContext("2d");
-		animationCtx.clearRect(0, 0, 32, 64);
+    constructor() {
+        super("Images/char2.png", 32, 64);
+        this.dx = 0;
+        this.dy = 0;
+        this.ay = 0;
+        this.xRemainder = 0;
+        this.yRemainder = 0;
+        this.ground_hitbox = new GameObject("", 32, 8);
+        this.grounded = false;
+        this.animationFrame = 0;
+        this.animationDelay = 10;
+        this.animationDelayCounter = 0;
+        this.mirror = false;
+    }
+
+    update(blocks) {
+        this.colided = false;
+        this.moveX(this.dx); // changes this.colided
+        this.moveY(this.dy);
+        this.ground_hitbox.moveTo(this.x, this.y + 60);
+        this.grounded = false;
+        for (var i = 0; i < blocks.length; i++) {
+            if (this.ground_hitbox.colides(blocks[i])) {
+                this.grounded = true;
+                break;
+            }
+        }
+    }
+
+    moveX(distance) {
+        this.xRemainder += distance;
+        var intMove = Math.round(this.xRemainder);
+        this.xRemainder -= intMove;
+        var direction = Math.sign(intMove);
+        while (intMove != 0) {
+            this.x += direction;
+            intMove -= direction;
+            for (var i = 0; i < blocks.length; i++) {
+                if (this.colides(blocks[i])) {
+                    this.x -= direction;
+                    this.dx = 0;
+                    this.colided = true;
+                    blocks[i].onColide();
+                    return;
+                }
+            }
+        }
+    }
+
+    moveY(distance) { // repetitive code :(
+        this.yRemainder += distance;
+        var intMove = Math.round(this.yRemainder);
+        this.yRemainder -= intMove;
+        var direction = Math.sign(intMove);
+        while (intMove != 0) {
+            this.y += direction;
+            intMove -= direction;
+            for (var i = 0; i < blocks.length; i++) {
+                if (this.colides(blocks[i])) {
+                    this.y -= direction;
+                    this.dy = 0;
+                    this.colided = true;
+                    blocks[i].onColide();
+                    return;
+                }
+            }
+        }
+    }
+
+    draw(ctx) {
+        // super.draw(ctx);
+        this.ground_hitbox.drawHitbox(ctx);
+        var animationCtx = this.animationCanvas.getContext("2d");
+        animationCtx.clearRect(0, 0, 32, 64);
 
         if (this.dx == 0) {
             this.animationFrame = 0;
         }
 
-		if (this.mirror) {
-			animationCtx.save();
-			animationCtx.scale(-1, 1);
-			animationCtx.drawImage(this.img, -32, -this.animationFrame * 66);
-			animationCtx.restore();
+        if (this.mirror) {
+            animationCtx.save();
+            animationCtx.scale(-1, 1);
+            animationCtx.drawImage(this.img, -32, -this.animationFrame * 66);
+            animationCtx.restore();
 
-		} else {
-		animationCtx.drawImage(this.img, 0, -this.animationFrame * 66);
-		}
-		
-		ctx.drawImage(this.animatonCanvas, this.x, this.y);
-		this.drawHitbox(ctx);
+        } else {
+            animationCtx.drawImage(this.img, 0, -this.animationFrame * 66);
+        }
+
+        ctx.drawImage(this.animationCanvas, this.x, this.y);
+        this.drawHitbox(ctx);
 
 
-		this.animationDelayCounter++;
-		if (this.animationDelayCounter >= this.animationDelay) { // animation advancer 
-			this.animationDelayCounter = 0;
-			this.animationFrame++;
-			if (this.animationFrame >= 3) {
-				this.animationFrame = 0;
-			}
-		}
-	}
+        this.animationDelayCounter++;
+        if (this.animationDelayCounter >= this.animationDelay) { // animation advancer 
+            this.animationDelayCounter = 0;
+            this.animationFrame++;
+            if (this.animationFrame >= 3) {
+                this.animationFrame = 0;
+            }
+        }
+    }
 }
 
 
 
 function init() {
-	char = new Player();
-	var block = new GameObject("Images/char.png", 16, 16);
-	var spoik = new Spike("", 16, 16);
-	blocks.push(block);
-	blocks.push(spoik);
-	block.moveTo(600, 600);
-	spoik.moveTo(800, 650);
+    char = new Player();
+    var spoik = new Spike("", 16, 16);
+    var block2 = new StandartTile(16, 29);
+    new StandartTile(17, 29).deleteFromArrays();
+    new StandartTile(2, 0);
+
+    new StandartTile(16, 32);
+    var block = new StandartTile(16, 33);
+    new StandartTile(16, 34);
+    new StandartTile(17, 32);
+    new StandartTile(17, 33);
+    new StandartTile(17, 34);
+    new StandartTile(15, 33);
+    new StandartTile(15, 34);
+    console.log(block);
+    blocks.push(spoik);
+    console.log(blocks);
+    spoik.moveTo(800, 650);
     addEventListener("keydown", keyDownHandler);
     addEventListener("keyup", keyUpHandler);
     var canvas = document.getElementById("game");
@@ -191,10 +360,10 @@ function init() {
 }
 
 function keyDownHandler(e) {
-	if (e.isComposing || e.keyCode === 229) {
-		return;
-	}
-	console.log(e.code);
+    if (e.isComposing || e.keyCode === 229) {
+        return;
+    }
+    console.log(e.code);
     if (e.code === "KeyS") {
         keysDown.s = true;
     }
@@ -207,18 +376,18 @@ function keyDownHandler(e) {
     else if (e.code === "KeyA") {
         keysDown.a = true;
     }
-	else if (e.code === "ArrowRight") {
-		keysDown.d = true;
-	}
-	else if (e.code === "ArrowLeft") {
-		keysDown.a = true;
-	}
-	else if (e.code === "ArrowUp") {
-		keysDown.w = true;
-	}
-	else if (e.code === "ArrowDown") {
-		keysDown.s = true;
-	}
+    else if (e.code === "ArrowRight") {
+        keysDown.d = true;
+    }
+    else if (e.code === "ArrowLeft") {
+        keysDown.a = true;
+    }
+    else if (e.code === "ArrowUp") {
+        keysDown.w = true;
+    }
+    else if (e.code === "ArrowDown") {
+        keysDown.s = true;
+    }
 }
 
 function keyUpHandler(e) {
@@ -234,18 +403,18 @@ function keyUpHandler(e) {
     else if (e.code === "KeyA") {
         keysDown.a = false;
     }
-	else if (e.code === "ArrowRight") {
-		keysDown.d = false;
-	}
-	else if (e.code === "ArrowLeft") {
-		keysDown.a = false;
-	}
-	else if (e.code === "ArrowUp") {
-		keysDown.w = false;
-	}
-	else if (e.code === "ArrowDown") {
-		keysDown.s = false;
-	}
+    else if (e.code === "ArrowRight") {
+        keysDown.d = false;
+    }
+    else if (e.code === "ArrowLeft") {
+        keysDown.a = false;
+    }
+    else if (e.code === "ArrowUp") {
+        keysDown.w = false;
+    }
+    else if (e.code === "ArrowDown") {
+        keysDown.s = false;
+    }
 }
 
 function drawBackground(background, backgroundImage) {
@@ -260,9 +429,9 @@ function drawFrame(canvas) {
     ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, 1280, 720);
     char.draw(ctx);
-	for (var i = 0; i < blocks.length; i++) {
-		blocks[i].draw(ctx);
-	}
+    for (var i = 0; i < blocks.length; i++) {
+        blocks[i].draw(ctx);
+    }
     if (keysDown.a) {
         char.dx = -3;
         char.mirror = true;
@@ -272,22 +441,22 @@ function drawFrame(canvas) {
     } else {
         char.dx = 0;
     }
-	char.dy += char.ay;
-	if (char.dy > 15) {
-		char.dy = 15;
-	}
+    char.dy += char.ay;
+    if (char.dy > 15) {
+        char.dy = 15;
+    }
     char.update(blocks);
-	if (char.grounded) {
-		char.ay = 0;
-	} else {
-		char.ay = gravity;
-	}
-	if (char.colided) {
-		console.log("colided");
-	}
-	if (char.grounded && keysDown.w) {
-		char.dy = -20;
-	}
+    if (char.grounded) {
+        char.ay = 0;
+    } else {
+        char.ay = gravity;
+    }
+    if (char.colided) {
+        console.log("colided");
+    }
+    if (char.grounded && keysDown.w) {
+        char.dy = -20;
+    }
     if (char.x < 0 || char.x + char.w > 1280) {
         char.x -= char.dx;
         char.dx = 0;
@@ -296,9 +465,9 @@ function drawFrame(canvas) {
     if (char.y < 0 || char.y + char.h > 720) {
         char.y -= char.dy;
         char.dy = 0;
-		if (keysDown.w) {
-			char.dy = -20;
-		}
+        if (keysDown.w) {
+            char.dy = -20;
+        }
     }
 
 }
