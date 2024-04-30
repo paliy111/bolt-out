@@ -19,9 +19,12 @@ var keysDown = {
     d: false,
 };
 
+var buttons = new Array();
+
 var backgroundFrame = 0;
 
 var gameHandle;
+var buttonHandle;
 
 class GameObject {
     constructor(src, w, h) {
@@ -69,6 +72,33 @@ class GameObject {
     }
 }
 
+class Button extends GameObject {
+    constructor(img, id, x, y, w, h, func) {
+        super(img, w, h);
+        this.x = x;
+        this.y = y;
+        this.id = id;
+        this.func = func;
+        this.animationCanvas.getContext("2d").drawImage(this.img, -this.id * (this.w + 4), 0);
+    }
+
+    coordsIn(x, y) {
+        console.log(x, y);
+        return (this.x < x && x < this.x + this.w && this.y < y && y < this.y + this.h);
+    }
+
+    onPress() {
+        this.animationCanvas.getContext("2d").drawImage(this.img, -this.id * (this.w + 4), -this.h - 4);
+        if (this.func)
+            this.func();
+    }
+
+    drawLevelButton(ctx) {
+        this.animationCanvas.getContext("2d").drawImage(this.img, -128, 0);
+        super.draw(ctx);
+    }
+}
+
 class StandartTile extends GameObject {
     constructor(x, y) {
         super("Images/tile.png", 16, 16);
@@ -86,7 +116,7 @@ class StandartTile extends GameObject {
     /** checks for connecting textures
      * StandartTiles only connect with themselves */
     connectsTo(block) {
-        return block != null && isSameClass(this, block);
+        return block && isSameClass(this, block);
     }
 
     /** sets for updates all adjacent blocks and gets the right texture for this block */
@@ -112,7 +142,6 @@ class StandartTile extends GameObject {
 
     /** updates this blocks adjacent information */
     setAdjacent(position, toDelete) {
-        console.log(this, this.exposedBlocks);
         var mask = 1 << position;
         if (toDelete) {
             this.exposedBlocks |= mask; 
@@ -120,7 +149,6 @@ class StandartTile extends GameObject {
             this.exposedBlocks &= ~mask;
         }
         this.exposedBlocks &= 255
-        console.log(this.exposedBlocks);
         this.texturePosition = this.getTexturePosition();
         this.updateTexture();
     }
@@ -226,7 +254,9 @@ class StandartTile extends GameObject {
         level[x][y] = null;
         this.initAdjacent(x, y, true);
         blocks.splice(this.blocksIndex, 1);
-
+        for (var i = this.blocksIndex; i < blocks.length; i++) {
+            blocks[i].blocksIndex--;
+        }
     }
     
 }
@@ -370,32 +400,23 @@ function isSameClass(obj1, obj2) {
 
 function init() {
     char = new Player();
-    var spoik = new Spike("", 16, 16);
-    var block2 = new StandartTile(16, 29);
-    new StandartTile(17, 29).deleteFromArrays();
-    new StandartTile(2, 0);
 
-    new StandartTile(16, 32);
-    var block = new StandartTile(16, 33);
-    new StandartTile(16, 34);
-    new StandartTile(17, 32);
-    new StandartTile(17, 33);
-    new StandartTile(17, 34);
-    new StandartTile(15, 33);
-    new StandartTile(15, 34);
-    console.log(block);
-    blocks.push(spoik);
-    console.log(blocks);
-    spoik.moveTo(800, 650);
     var canvas = document.getElementById("game");
+    var ui = document.getElementById("ui");
     var background = document.getElementById("background");
     var backgroundImage = document.getElementById("backgroundImage");
+
     addEventListener("keydown", keyDownHandler);
     addEventListener("keyup", keyUpHandler);
-    canvas.addEventListener("mousedown", mouseDownHandler);
-    canvas.addEventListener("contextmenu", mouseRightClick)
+
+    canvas.addEventListener("contextmenu", mouseRightClick);
+    addEventListener("mousedown", uiMouseDownHandler);
+    ui.addEventListener("contextmenu", mouseRightClick);
+
+    drawMainMenu(ui);
+
     drawBackground(background, backgroundImage);
-    gameHandle = setInterval(gameLoop, 17, canvas); // ~60 fps
+    buttonHandle = setInterval(drawButtons, 34, ui);
     setInterval(drawBackground, 500, background, backgroundImage);
 }
 
@@ -456,16 +477,60 @@ function keyUpHandler(e) {
         keysDown.s = false;
     }
 }
-
-function mouseDownHandler(e) {
-    console.log(e.offsetX, e.offsetY);
-    var blockX = Math.floor(e.offsetX / 16);
-    var blockY = Math.floor(e.offsetY / 16);
-    new StandartTile(blockX, blockY);
+function uiMouseDownHandler(e) {
+    console.log("in ui")
+    for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].coordsIn(e.offsetX, e.offsetY)) {
+            buttons[i].onPress();
+        }
+    }
 }
 
+function levelMakerMouseDownHandler(e) {
+    var blockX = Math.floor(e.offsetX / 16);
+    var blockY = Math.floor(e.offsetY / 16);
+    if (level[blockX][blockY]) {
+        level[blockX][blockY].deleteFromArrays();
+    } else {
+        new StandartTile(blockX, blockY);
+    }
+}
 function mouseRightClick(e) {
     e.preventDefault();
+}
+
+function drawMainMenu(ui) {
+    var ctx = ui.getContext("2d");
+    var logo = document.getElementById("logo");
+    var center = 1280 / 2;
+    var buttonWidth = 96;
+    var buttonHeight = 110;
+    ctx.drawImage(logo, (1280 - logo.width) / 2, 100);
+    var startButton = new Button("Images/mainButtons.png", 0, center - 2 * buttonWidth, 300, buttonWidth, buttonHeight, loadGame);
+    var levelBuilderButton = new Button("Images/mainButtons.png", 1, center + buttonWidth, 300, buttonWidth, buttonHeight, loadLevelMaker);
+    buttons.push(startButton);
+    buttons.push(levelBuilderButton);
+    startButton.draw(ctx);
+    levelBuilderButton.drawLevelButton(ctx);
+}
+function clearUI(ui) {
+    ui.getContext("2d").clearRect(0, 0, 1480, 720);
+}
+
+function loadGame() {
+    buttons = new Array();
+    clearInterval(buttonHandle);
+    var game = document.getElementById("game");
+    var ui = document.getElementById("ui");
+    clearUI(ui);
+    gameHandle = setInterval(gameLoop, 17, game); // ~60 fps
+}
+
+
+function loadLevelMaker() {
+    var canvas = document.getElementById("game");
+    canvas.addEventListener("mousedown", levelMakerMouseDownHandler);
+    var x = setInterval(renderBlocks, 17, canvas);
 }
 
 function drawBackground(background, backgroundImage) {
@@ -473,6 +538,13 @@ function drawBackground(background, backgroundImage) {
     backgroundFrame++;
     if (backgroundFrame > 1) {
         backgroundFrame = 0;
+    }
+}
+
+function drawButtons(ui) {
+    var ctx = ui.getContext("2d");
+    for (var i = 0; i < buttons.length; i++) {
+        buttons[i].draw(ctx);
     }
 }
 function renderBlocks(canvas) {
