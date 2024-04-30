@@ -229,14 +229,14 @@ class StandartTile extends GameObject {
 
     }
     
-    }
+}
 
 class WallTile extends StandartTile {
     constructor(x, y) {
         super(x, y);
         this.img.src = "Images/wall.png";
         this.updateTexture();
-}
+    }
 
     getTexturePosition() {
         return this.getTexturePositionAdjacent()
@@ -392,6 +392,8 @@ function init() {
     var backgroundImage = document.getElementById("backgroundImage");
     addEventListener("keydown", keyDownHandler);
     addEventListener("keyup", keyUpHandler);
+    canvas.addEventListener("mousedown", mouseDownHandler);
+    canvas.addEventListener("contextmenu", mouseRightClick)
     drawBackground(background, backgroundImage);
     gameHandle = setInterval(gameLoop, 17, canvas); // ~60 fps
     setInterval(drawBackground, 500, background, backgroundImage);
@@ -453,6 +455,17 @@ function keyUpHandler(e) {
     else if (e.code === "ArrowDown") {
         keysDown.s = false;
     }
+}
+
+function mouseDownHandler(e) {
+    console.log(e.offsetX, e.offsetY);
+    var blockX = Math.floor(e.offsetX / 16);
+    var blockY = Math.floor(e.offsetY / 16);
+    new StandartTile(blockX, blockY);
+}
+
+function mouseRightClick(e) {
+    e.preventDefault();
 }
 
 function drawBackground(background, backgroundImage) {
