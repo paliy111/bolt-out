@@ -2,17 +2,21 @@
     background-color: rgb(24, 15, 18);
 }
 
-﻿canvas {
+canvas {
     border: 2px solid white;
     position: absolute;
 }
 
 #game {
-    z-index: 2;
+    z-index: 3;
 }
 
 #background {
     z-index: 1;
+}
+
+#ui {
+    z-index: 2;
 }
 
 #unrenderdImages {
