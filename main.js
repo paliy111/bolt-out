@@ -1,6 +1,8 @@
 const gravity = 0.8;
 
 var char;
+var spawnX = 0;
+var spawnY = 0;
 
 var blocks = new Array(); // for collision and rendering check
 // all blocks should be referenced here and in the level array
@@ -18,6 +20,8 @@ var keysDown = {
 };
 
 var backgroundFrame = 0;
+
+var gameHandle;
 
 class GameObject {
     constructor(src, w, h) {
@@ -43,7 +47,7 @@ class GameObject {
     }
 
     onColide() {
-        return;
+        return true;
     }
 
     moveTo(x, y) {
@@ -68,16 +72,21 @@ class StandartTile extends GameObject {
         this.moveTo(x * 16, y * 16);
         this.blocksIndex = blocks.push(this) - 1;
         level[x][y] = this;
-        document.body.appendChild(this.animationCanvas);
-        this.animationCanvas.style = "z-index: 4";
         this.exposedBlocks = 0; // using this as a flag integer 0b0000 0000
                                 // bit 0 is topleft, 1-top, 2- topright, 3-left, 4-right, 5-bottomleft, 6-bottom, 7-bottomright
         this.texturePosition = [];
         this.initAdjacent(x, y, false);
         this.texturePosition = this.getTexturePosition();
-        this.changeToTexture(...this.texturePosition);
+        this.updateTexture();
     }
 
+    /** checks for connecting textures
+     * StandartTiles only connect with themselves */
+    connectsTo(block) {
+        return block != null && isSameClass(this, block);
+    }
+
+    /** sets for updates all adjacent blocks and gets the right texture for this block */
     initAdjacent(x, y, toDelete) {
         var mask = 1;
         var res = 0;
@@ -87,7 +96,7 @@ class StandartTile extends GameObject {
                 var block = level[x + j][y + i];
                 if (i == 0 && j == 0)
                     continue;
-                if (block) {
+                if (this.connectsTo(block)) {
                     res |= mask;
                     block.setAdjacent(7 - counter, toDelete);
                 }
@@ -95,10 +104,10 @@ class StandartTile extends GameObject {
                 counter++;
             }
         }
-        console.log(this.x, this.y, "got", ~res & 255);
         this.exposedBlocks = ~res & 255;
     }
 
+    /** updates this blocks adjacent information */
     setAdjacent(position, toDelete) {
         console.log(this, this.exposedBlocks);
         var mask = 1 << position;
@@ -110,45 +119,49 @@ class StandartTile extends GameObject {
         this.exposedBlocks &= 255
         console.log(this.exposedBlocks);
         this.texturePosition = this.getTexturePosition();
-        this.changeToTexture(...this.texturePosition);
+        this.updateTexture();
     }
 
+    /** gets the right texture checks only orthogonally */
+    getTexturePositionAdjacent() {
+        var x = this.exposedBlocks & 90;
+        if (x == 0)
+            return [1, 1];
+        else if (x == 2)
+            return [1, 0];
+        else if (x == 8)
+            return [0, 1];
+        else if (x === 10)
+            return [0, 0];
+        else if (x == 16)
+            return [2, 1];
+        else if (x == 18)
+            return [2, 0];
+        else if (x == 24)
+            return [3, 1];
+        else if (x == 26)
+            return [3, 0];
+        else if (x == 64)
+            return [1, 2];
+        else if (x == 66)
+            return [1, 3];
+        else if (x == 72)
+            return [0, 2];
+        else if (x == 74)
+            return [0, 3];
+        else if (x == 80)
+            return [2, 2];
+        else if (x == 82)
+            return [2, 3];
+        else if (x == 88)
+            return [3, 2];
+        return [3, 3];
+    }
+
+    /** gets the texture for this block also checks corners */
     getTexturePosition() {
         var x = this.exposedBlocks;
-        var y = x & 90;
-        var res = [3, 3];
-        if (y == 0)
-            res = [1, 1];
-        else if (y == 2)
-            res = [1, 0];
-        else if (y == 8)
-            res = [0, 1];
-        else if (y === 10)
-            res = [0, 0];
-        else if (y == 16)
-            res = [2, 1];
-        else if (y == 18)
-            res = [2, 0];
-        else if (y == 24)
-            res = [3, 1];
-        else if (y == 26)
-            res = [3, 0];
-        else if (y == 64)
-            res = [1, 2];
-        else if (y == 66)
-            res = [1, 3];
-        else if (y == 72)
-            res = [0, 2];
-        else if (y == 74)
-            res = [0, 3];
-        else if (y == 80)
-            res = [2, 2];
-        else if (y == 82)
-            res = [2, 3];
-        else if (y == 88)
-            res = [3, 2];
-        else if (y == 90)
-            res = [3, 3]
+        var res = this.getTexturePositionAdjacent();
         if (x == 1)
             res = [5, 1];
         else if (x == 4)
@@ -198,6 +211,10 @@ class StandartTile extends GameObject {
 
     }
 
+    updateTexture() {
+        this.changeToTexture(...this.texturePosition);
+    }
+
     deleteFromArrays() {
         var x = this.x / 16;
         var y = this.y / 16;
@@ -206,10 +223,7 @@ class StandartTile extends GameObject {
         blocks.splice(this.blocksIndex, 1);
 
     }
-    draw(ctx) {
-  /*      var aCtx = this.animationCanvas.getContext("2d");
-        ctx.drawImage(this.animationCanvas, this.x, this.y);*/
-        super.draw(ctx)
+    
     }
 }
 
@@ -227,6 +241,8 @@ class Spike extends GameObject {
 class Player extends GameObject {
     constructor() {
         super("Images/char2.png", 32, 64);
+        this.x = spawnX;
+        this.y = spawnX;
         this.dx = 0;
         this.dy = 0;
         this.ay = 0;
@@ -263,7 +279,7 @@ class Player extends GameObject {
             this.x += direction;
             intMove -= direction;
             for (var i = 0; i < blocks.length; i++) {
-                if (this.colides(blocks[i])) {
+                if (this.colides(blocks[i]) && blocks[i].onColide()) {
                     this.x -= direction;
                     this.dx = 0;
                     this.colided = true;
@@ -283,7 +299,7 @@ class Player extends GameObject {
             this.y += direction;
             intMove -= direction;
             for (var i = 0; i < blocks.length; i++) {
-                if (this.colides(blocks[i])) {
+                if (this.colides(blocks[i]) && blocks[i].onColide()) {
                     this.y -= direction;
                     this.dy = 0;
                     this.colided = true;
@@ -329,7 +345,9 @@ class Player extends GameObject {
     }
 }
 
-
+function isSameClass(obj1, obj2) {
+    return obj1.constructor.name == obj2.constructor.name;
+}
 
 function init() {
     char = new Player();
