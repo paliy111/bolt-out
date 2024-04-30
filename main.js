@@ -230,11 +230,27 @@ class StandartTile extends GameObject {
     }
     
     }
+
+class WallTile extends StandartTile {
+    constructor(x, y) {
+        super(x, y);
+        this.img.src = "Images/wall.png";
+        this.updateTexture();
+}
+
+    getTexturePosition() {
+        return this.getTexturePositionAdjacent()
+    }
+
+    onColide() {
+        return false; // no colision
+    }
 }
 
 class Spike extends GameObject {
     onColide() {
         console.log("died");
+        return true;
     }
 
     draw(ctx) {
@@ -288,7 +304,6 @@ class Player extends GameObject {
                     this.x -= direction;
                     this.dx = 0;
                     this.colided = true;
-                    blocks[i].onColide();
                     return;
                 }
             }
@@ -308,7 +323,6 @@ class Player extends GameObject {
                     this.y -= direction;
                     this.dy = 0;
                     this.colided = true;
-                    blocks[i].onColide();
                     return;
                 }
             }
