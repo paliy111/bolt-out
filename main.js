@@ -387,12 +387,13 @@ function init() {
     blocks.push(spoik);
     console.log(blocks);
     spoik.moveTo(800, 650);
-    addEventListener("keydown", keyDownHandler);
-    addEventListener("keyup", keyUpHandler);
     var canvas = document.getElementById("game");
     var background = document.getElementById("background");
     var backgroundImage = document.getElementById("backgroundImage");
-    setInterval(drawFrame, 17, canvas); // ~60 fps
+    addEventListener("keydown", keyDownHandler);
+    addEventListener("keyup", keyUpHandler);
+    drawBackground(background, backgroundImage);
+    gameHandle = setInterval(gameLoop, 17, canvas); // ~60 fps
     setInterval(drawBackground, 500, background, backgroundImage);
 }
 
@@ -461,14 +462,17 @@ function drawBackground(background, backgroundImage) {
         backgroundFrame = 0;
     }
 }
-
-function drawFrame(canvas) {
-    ctx = canvas.getContext("2d");
+function renderBlocks(canvas) {
+    var ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, 1280, 720);
-    char.draw(ctx);
     for (var i = 0; i < blocks.length; i++) {
         blocks[i].draw(ctx);
     }
+    return ctx;
+}
+function gameLoop(canvas) {
+    var ctx = renderBlocks(canvas);
+    char.draw(ctx);
     if (keysDown.a) {
         char.dx = -3;
         char.mirror = true;
