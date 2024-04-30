@@ -46,6 +46,9 @@ class GameObject {
             this.y + this.h > other.y)
     }
 
+    /** will return true if collision is with solid block 
+     * should return false if this block is not solid
+     */
     onColide() {
         return true;
     }
@@ -203,8 +206,10 @@ class StandartTile extends GameObject {
         return res
     }       
 
+    /**
+     * changes this blocks texture to 
+     */
     changeToTexture(i, j) {
-        console.log(this.x, this.y, "changing to", i, j, this.exposedBlocks);
         var ctx = this.animationCanvas.getContext("2d");
         ctx.clearRect(0, 0, this.w, this.h)
         ctx.drawImage(this.img, -16 * i, -16 * j);
