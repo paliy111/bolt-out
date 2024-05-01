@@ -6,15 +6,18 @@
     <title></title>
     <link rel="stylesheet" type="text/css" href="style.css" />
 </head>
-<body style="background: gray" onload="init();">
+<body onload="init();">
+    <img id="logo" src="Images/logo.png"/>
     <div id="unrenderdImages">
-        <img src="Images/char.png"/>
         <img id="backgroundImage" src="Images/background.png" />
         <img src="Images/tile.png"/>
+        <img src="Images/wall.png"/>
+        <img src="Images/mainButtons.png" />
     </div>
     <div>
         <canvas id="background" width="1280" height="720"> </canvas>
         <canvas id="game" width="1280" height="720"></canvas>
+        <canvas id="ui" width="1504" height="720"></canvas>
     </div>
     <script type="text/javascript" src="main.js"></script>
 </body>
