@@ -10,7 +10,7 @@ var level = new Array(80);
 for (var i = 0; i < level.length; i++) {
     level[i] = new Array(45);
 }
-console.log(level);
+level[-1] = new Array();
 
 var keysDown = {
     a: false,
@@ -37,6 +37,9 @@ class GameObject {
         this.animationCanvas.width = w;
         this.animationCanvas.height = h;
         this.animationCanvas.getContext("2d").drawImage(this.img, 0, 0);
+        this.animationFrame = 0;
+        this.animationDelay = 10;
+        this.animationDelayCounter = 0;
         this.h = h;
         this.w = w;
         this.x = 0;
@@ -60,6 +63,16 @@ class GameObject {
     moveTo(x, y) {
         this.x = x;
         this.y = y;
+    }
+    animationAdvance() {
+        this.animationDelayCounter++;
+        if (this.animationDelayCounter >= this.animationDelay) { // animation advancer 
+            this.animationDelayCounter = 0;
+            this.animationFrame++;
+            if (this.animationFrame >= 3) {
+                this.animationFrame = 0;
+            }
+        }
     }
 
     draw(ctx) {
@@ -107,11 +120,12 @@ class EditorButton extends Button {
             buttons[i].pressed = false;
         }
         this.pressed = true;
+        this.func();
     }
 
     draw(ctx) {
         this.animationCanvas.getContext("2d").drawImage(this.img, this.idX * -32, -36 * this.idY - 84 * this.pressed);
-        super.draw(ctx)
+        super.draw(ctx);
     }
 }
 
@@ -274,7 +288,7 @@ class StandartTile extends GameObject {
     changeToTexture(i, j) {
         var ctx = this.animationCanvas.getContext("2d");
         ctx.clearRect(0, 0, this.w, this.h)
-        ctx.drawImage(this.img, -16 * i, -16 * j);
+        ctx.drawImage(this.img, -this.w * i, -this.h * j);
 
     }
 
@@ -310,16 +324,76 @@ class WallTile extends StandartTile {
         return false; // no colision
     }
 }
+class MultiTileBlock extends StandartTile {
+    constructor(img, x, y, w, h) {
+        super(x, y);
+        this.img.src = img;
+        this.tileWidth = w;
+        this.tileHeight = h;
+        for (var i = x; i < x + w; i++) {
+            for (var j = y; j < y + h; j++) {
+                if (i == x && j == y) {
+                    continue;
+                }
+                var tile = level[i][j];
+                if (tile) {
+                    tile.deleteFromArrays();
+                }
+                level[i][j] = this;
+            }
+        }
+    }
 
-class Spike extends GameObject {
+    deleteFromArrays() {
+        var x = this.x / 16;
+        var y = this.y / 16;
+        super.deleteFromArrays();
+        for (var i = x; i < x + w; i++) {
+            for (var j = y; j < y + h; j++) {
+                if (i == x && j == y) {
+                    continue;
+                }
+                level[i][j] = null;
+            }
+        }
+    }
+}
+class EndDoor extends StandartTile {
+
+}
+
+class Saw extends StandartTile {
+
+    constructor(x, y) {
+        super(x, y);
+        this.img.src = "Images/saw.png";
+        this.animationCanvas.width = 32;
+        this.animationCanvas.height = 32;
+        this.w = 32;
+        this.h = 32;
+        this.texturePosition = [0, 0];
+        this.animationDelay = 5;
+      
+
+        if (level[x + 1][y + 1]) // saws are 2x2
+            level[x + 1][y + 1].deleteFromArrays();
+        level[x + 1][y + 1] = this;
+        if (level[x + 1][y])
+            level[x + 1][y].deleteFromArrays();
+        level
+        if (level[x][y + 1])
+            level[x][y + 1].deleteFromArrays();
+    }
     onColide() {
-        console.log("died");
+        onDeath();
         return true;
     }
 
     draw(ctx) {
-        ctx.fillStyle = "red";
-        ctx.fillRect(this.x, this.y, this.w, this.h);
+        this.animationAdvance();
+        this.animationCanvas.getContext("2d").drawImage(this.img, 0, this.animationFrame * -34);
+
+        super.draw(ctx);
     }
 }
 
@@ -335,9 +409,6 @@ class Player extends GameObject {
         this.yRemainder = 0;
         this.ground_hitbox = new GameObject("", 32, 8);
         this.grounded = false;
-        this.animationFrame = 0;
-        this.animationDelay = 10;
-        this.animationDelayCounter = 0;
         this.mirror = false;
     }
 
@@ -398,10 +469,11 @@ class Player extends GameObject {
         this.ground_hitbox.drawHitbox(ctx);
         var animationCtx = this.animationCanvas.getContext("2d");
         animationCtx.clearRect(0, 0, 32, 64);
-
+        this.animationAdvance();
         if (this.dx == 0) {
             this.animationFrame = 0;
         }
+        
 
         if (this.mirror) {
             animationCtx.save();
@@ -415,16 +487,6 @@ class Player extends GameObject {
 
         ctx.drawImage(this.animationCanvas, this.x, this.y);
         this.drawHitbox(ctx);
-
-
-        this.animationDelayCounter++;
-        if (this.animationDelayCounter >= this.animationDelay) { // animation advancer 
-            this.animationDelayCounter = 0;
-            this.animationFrame++;
-            if (this.animationFrame >= 3) {
-                this.animationFrame = 0;
-            }
-        }
     }
 }
 
@@ -450,8 +512,6 @@ function init() {
     drawMainMenu(game);
 
     drawBackground(background, backgroundImage);
-    buttonHandle = setInterval(drawButtons, 34, ui);
-    //renderHandle = setInterval(renderBlocks, 17, canvas);
     setInterval(drawBackground, 500, background, backgroundImage);
 }
 
@@ -538,6 +598,7 @@ function drawMainMenu(game) {
     var logo = document.getElementById("logo");
     var center = 1280 / 2;
     var buttonWidth = 96;
+    buttonHandle = setInterval(drawButtons, 34, ui);
     ctx.drawImage(logo, (1280 - logo.width) / 2, 100);
     var startButton = new MainMenuButton(0, center - 2 * buttonWidth, 300, loadGame);
     var levelBuilderButton = new MainMenuButton(1, center + buttonWidth, 300, loadLevelMaker);
@@ -547,7 +608,11 @@ function drawMainMenu(game) {
 function clearUI(ui) {
     ui.getContext("2d").clearRect(0, 0, 1480, 720);
 }
-
+function onDeath() {
+    clearInterval(gameHandle);
+    setTimeout(loadGame, 200);
+    char.moveTo(spawnX, spawnY);
+}
 function loadGame() {
     buttons = new Array();
     clearInterval(buttonHandle);
@@ -555,15 +620,18 @@ function loadGame() {
     var game = document.getElementById("game");
     var ui = document.getElementById("ui");
     clearUI(ui);
+    game.removeEventListener("mousedown", levelMakerMouseDownHandler);
     gameHandle = setInterval(gameLoop, 16.7, game); // ~60 fps
 }
 
 
 function loadLevelMaker() {
     buttons = new Array();
-    var canvas = document.getElementById("game");
-    canvas.addEventListener("mousedown", levelMakerMouseDownHandler);
-    renderHandle = setInterval(renderBlocks, 17, canvas);
+    var game = document.getElementById("game");
+    game.addEventListener("mousedown", levelMakerMouseDownHandler);
+    renderHandle = setInterval(renderBlocks, 17, game);
+    var button = new EditorButton(0, 0, 1312, 32, loadGame);
+    buttons.push(button);
 }
 
 function drawBackground(background, backgroundImage) {
@@ -576,11 +644,15 @@ function drawBackground(background, backgroundImage) {
 
 function drawButtons(ui) {
     var ctx = ui.getContext("2d");
-    ctx.clearRect(0, 0, 1420, 720);
+    ctx.clearRect(0, 0, 1480, 720);
     for (var i = 0; i < buttons.length; i++) {
         buttons[i].draw(ctx);
     }
 }
+
+/**
+ * draws all blocks to screen
+ */
 function renderBlocks(canvas) {
     var ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, 1280, 720);
@@ -589,6 +661,10 @@ function renderBlocks(canvas) {
     }
     return ctx;
 }
+
+/**
+ * main game loop where all logic happens
+ */
 function gameLoop(canvas) {
     var ctx = renderBlocks(canvas);
     char.draw(ctx);
