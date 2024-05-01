@@ -84,7 +84,6 @@ class Button extends GameObject {
     }
 
     coordsIn(x, y) {
-        console.log(x, y);
         return (this.x < x && x < this.x + this.w && this.y < y && y < this.y + this.h);
     }
 
@@ -93,8 +92,27 @@ class Button extends GameObject {
         if (this.func)
             this.func
     }
+}
 
+class EditorButton extends Button {
+    constructor(idX, idY, x, y, func) {
+        super("Images/buttons.png", idX * 8 + idY, x, y, 32, 32, func);
+        this.idX = idX;
+        this.idY = idY;
+        this.pressed = false;
+    }
 
+    onPress() {
+        for (var i = 0; i < buttons.length; i++) {
+            buttons[i].pressed = false;
+        }
+        this.pressed = true;
+    }
+
+    draw(ctx) {
+        this.animationCanvas.getContext("2d").drawImage(this.img, this.idX * -32, -36 * this.idY - 84 * this.pressed);
+        super.draw(ctx)
+    }
 }
 
 class MainMenuButton extends Button {
@@ -417,7 +435,7 @@ function isSameClass(obj1, obj2) {
 function init() {
     char = new Player();
 
-    var canvas = document.getElementById("game");
+    var game = document.getElementById("game");
     var ui = document.getElementById("ui");
     var background = document.getElementById("background");
     var backgroundImage = document.getElementById("backgroundImage");
@@ -425,11 +443,11 @@ function init() {
     addEventListener("keydown", keyDownHandler);
     addEventListener("keyup", keyUpHandler);
 
-    canvas.addEventListener("contextmenu", mouseRightClick);
+    game.addEventListener("contextmenu", mouseRightClick);
     addEventListener("mousedown", uiMouseDownHandler);
     ui.addEventListener("contextmenu", mouseRightClick);
 
-    drawMainMenu(ui);
+    drawMainMenu(game);
 
     drawBackground(background, backgroundImage);
     buttonHandle = setInterval(drawButtons, 34, ui);
@@ -515,8 +533,8 @@ function mouseRightClick(e) {
     e.preventDefault();
 }
 
-function drawMainMenu(ui) {
-    var ctx = ui.getContext("2d");
+function drawMainMenu(game) {
+    var ctx = game.getContext("2d");
     var logo = document.getElementById("logo");
     var center = 1280 / 2;
     var buttonWidth = 96;
@@ -532,10 +550,8 @@ function clearUI(ui) {
 
 function loadGame() {
     buttons = new Array();
-    console.log(renderHandle);
     clearInterval(buttonHandle);
     clearInterval(renderHandle);
-    console.log(renderHandle);
     var game = document.getElementById("game");
     var ui = document.getElementById("ui");
     clearUI(ui);
@@ -544,6 +560,7 @@ function loadGame() {
 
 
 function loadLevelMaker() {
+    buttons = new Array();
     var canvas = document.getElementById("game");
     canvas.addEventListener("mousedown", levelMakerMouseDownHandler);
     renderHandle = setInterval(renderBlocks, 17, canvas);
@@ -559,6 +576,7 @@ function drawBackground(background, backgroundImage) {
 
 function drawButtons(ui) {
     var ctx = ui.getContext("2d");
+    ctx.clearRect(0, 0, 1420, 720);
     for (var i = 0; i < buttons.length; i++) {
         buttons[i].draw(ctx);
     }
