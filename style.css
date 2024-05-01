@@ -22,3 +22,7 @@ canvas {
 #unrenderdImages {
     display: none;
 }
+
+#logo {
+    user-select: none;
+}
