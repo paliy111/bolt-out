@@ -81,12 +81,6 @@ class GameObject {
     draw(ctx) {
         ctx.drawImage(this.animationCanvas, this.x, this.y)
     }
-
-
-    drawHitbox(ctx) {
-        ctx.strokeStyle = "red";
-        ctx.strokeRect(this.x, this.y, this.w, this.h);
-    }
 }
 
 class Button extends GameObject {
@@ -503,7 +497,6 @@ class Player extends GameObject {
 
     draw(ctx) {
         // super.draw(ctx);
-        this.ground_hitbox.drawHitbox(ctx);
         var animationCtx = this.animationCanvas.getContext("2d");
         animationCtx.clearRect(0, 0, 32, 64);
         this.animationAdvance();
@@ -523,7 +516,6 @@ class Player extends GameObject {
         }
 
         ctx.drawImage(this.animationCanvas, this.x, this.y);
-        this.drawHitbox(ctx);
     }
 }
 
@@ -667,7 +659,6 @@ function loadGame() {
 }
 
 function changeSelection(id) {
-    console.log("id", id);
     selectedBlock = id;
 }
 function loadLevelMaker() {
