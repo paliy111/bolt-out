@@ -6,7 +6,7 @@ var spawnY = 32;
 
 var blocks = new Array(); // for collision and rendering check
 // all blocks should be referenced here and in the level array
-var level = new Array(80);
+var level = new Array(81);
 for (var i = 0; i < level.length; i++) {
     level[i] = new Array(45);
 }
@@ -20,6 +20,9 @@ var keysDown = {
 };
 
 var buttons = new Array();
+
+var spawnPlatform;
+var selectedBlock;
 
 var backgroundFrame = 0;
 
@@ -109,7 +112,7 @@ class Button extends GameObject {
 
 class EditorButton extends Button {
     constructor(idX, idY, x, y, func) {
-        super("Images/buttons.png", idX * 8 + idY, x, y, 32, 32, func);
+        super("Images/buttons.png", idX + idY * 8, x, y, 32, 32, func);
         this.idX = idX;
         this.idY = idY;
         this.pressed = false;
@@ -120,11 +123,11 @@ class EditorButton extends Button {
             buttons[i].pressed = false;
         }
         this.pressed = true;
-        this.func();
+        this.func(this.id);
     }
 
     draw(ctx) {
-        this.animationCanvas.getContext("2d").drawImage(this.img, this.idX * -32, -36 * this.idY - 84 * this.pressed);
+        this.animationCanvas.getContext("2d").drawImage(this.img, this.idX * -36, -36 * this.idY - 84 * this.pressed);
         super.draw(ctx);
     }
 }
@@ -151,6 +154,9 @@ class StandartTile extends GameObject {
     constructor(x, y) {
         super("Images/tile.png", 16, 16);
         this.moveTo(x * 16, y * 16);
+        if (level[x][y]) {
+            level[x][y].deleteFromArrays();
+        }
         this.blocksIndex = blocks.push(this) - 1;
         level[x][y] = this;
         this.exposedBlocks = 0; // using this as a flag integer 0b0000 0000
@@ -328,6 +334,10 @@ class MultiTileBlock extends StandartTile {
     constructor(img, x, y, w, h) {
         super(x, y);
         this.img.src = img;
+        this.w = 16 * w;
+        this.h = 16 * h;
+        this.animationCanvas.width = this.w;
+        this.animationCanvas.height = this.h;
         this.tileWidth = w;
         this.tileHeight = h;
         for (var i = x; i < x + w; i++) {
@@ -346,43 +356,70 @@ class MultiTileBlock extends StandartTile {
 
     deleteFromArrays() {
         var x = this.x / 16;
-        var y = this.y / 16;
+        var y = this.y / 16
+        var w = this.tileWidth;
+        var h = this.tileHeight;
         super.deleteFromArrays();
         for (var i = x; i < x + w; i++) {
             for (var j = y; j < y + h; j++) {
-                if (i == x && j == y) {
-                    continue;
-                }
                 level[i][j] = null;
             }
         }
     }
 }
-class EndDoor extends StandartTile {
 
+class SpawningPlatform extends MultiTileBlock {
+    constructor(x, y) {
+        super("Images/spawnPlatform.png", x, y, 3, 1);
+        if (spawnPlatform)
+            spawnPlatform.deleteFromArrays();
+        spawnPlatform = this;
+        spawnX = this.x;
+        spawnY = this.y - char.h;
+    }
+
+    onColide() {
+        return false;
+    }
+
+    draw(ctx) {
+        this.animationAdvance();
+        this.animationCanvas.getContext("2d").drawImage(this.img, 0, -18 * this.animationFrame);
+        super.draw(ctx);
+    }
+
+    deleteFromArrays() {
+        spawnX = 32;
+        spawnY = 32;
+        super.deleteFromArrays();
+    }
+}
+class EndDoor extends MultiTileBlock {
+    constructor(x, y) {
+        super("Images/endDoor.png", x, y, 2, 4);
+    }
+
+    getTexturePosition() {
+        return [0, 0];
+    }
+
+    onColide() {
+        alert("you won");
+        onDeath();
+    }
+
+    draw(ctx) {
+        this.animationCanvas.getContext("2d").drawImage(this.img, 0, 0);
+        super.draw(ctx);
+    }
 }
 
-class Saw extends StandartTile {
+class Saw extends MultiTileBlock {
 
     constructor(x, y) {
-        super(x, y);
-        this.img.src = "Images/saw.png";
-        this.animationCanvas.width = 32;
-        this.animationCanvas.height = 32;
-        this.w = 32;
-        this.h = 32;
+        super("Images/saw.png", x, y, 2, 2);
         this.texturePosition = [0, 0];
         this.animationDelay = 5;
-      
-
-        if (level[x + 1][y + 1]) // saws are 2x2
-            level[x + 1][y + 1].deleteFromArrays();
-        level[x + 1][y + 1] = this;
-        if (level[x + 1][y])
-            level[x + 1][y].deleteFromArrays();
-        level
-        if (level[x][y + 1])
-            level[x][y + 1].deleteFromArrays();
     }
     onColide() {
         onDeath();
@@ -519,7 +556,6 @@ function keyDownHandler(e) {
     if (e.isComposing || e.keyCode === 229) {
         return;
     }
-    console.log(e.code);
     if (e.code === "KeyS") {
         keysDown.s = true;
     }
@@ -585,8 +621,14 @@ function levelMakerMouseDownHandler(e) {
     var blockY = Math.floor(e.offsetY / 16);
     if (level[blockX][blockY]) {
         level[blockX][blockY].deleteFromArrays();
-    } else {
+    } else if (selectedBlock == 1) {
         new StandartTile(blockX, blockY);
+    } else if (selectedBlock == 10) {
+        new Saw(blockX, blockY);
+    } else if (selectedBlock == 4) {
+        new SpawningPlatform(blockX, blockY);
+    } else if (selectedBlock == 5) {
+        new EndDoor(blockX, blockY);
     }
 }
 function mouseRightClick(e) {
@@ -606,7 +648,7 @@ function drawMainMenu(game) {
     buttons.push(levelBuilderButton);
 }
 function clearUI(ui) {
-    ui.getContext("2d").clearRect(0, 0, 1480, 720);
+    ui.getContext("2d").clearRect(0, 0, 1506, 720);
 }
 function onDeath() {
     clearInterval(gameHandle);
@@ -624,13 +666,24 @@ function loadGame() {
     gameHandle = setInterval(gameLoop, 16.7, game); // ~60 fps
 }
 
-
+function changeSelection(id) {
+    console.log("id", id);
+    selectedBlock = id;
+}
 function loadLevelMaker() {
     buttons = new Array();
     var game = document.getElementById("game");
     game.addEventListener("mousedown", levelMakerMouseDownHandler);
     renderHandle = setInterval(renderBlocks, 17, game);
     var button = new EditorButton(0, 0, 1312, 32, loadGame);
+    buttons.push(button);
+    button = new EditorButton(1, 0, 1376, 32, changeSelection);
+    buttons.push(button);
+    button = new EditorButton(2, 1, 1440, 32, changeSelection);
+    buttons.push(button);
+    button = new EditorButton(4, 0, 1312, 96, changeSelection);
+    buttons.push(button);
+    button = new EditorButton(5, 0, 1376, 96, changeSelection);
     buttons.push(button);
 }
 
@@ -687,11 +740,9 @@ function gameLoop(canvas) {
     } else {
         char.ay = gravity;
     }
-    if (char.colided) {
-        console.log("colided");
-    }
+    
     if (char.grounded && keysDown.w) {
-        char.dy = -20;
+        char.dy = -13;
     }
     if (char.x < 0 || char.x + char.w > 1280) {
         char.x -= char.dx;
@@ -702,7 +753,7 @@ function gameLoop(canvas) {
         char.y -= char.dy;
         char.dy = 0;
         if (keysDown.w) {
-            char.dy = -20;
+            char.dy = -13;
         }
     }
 
