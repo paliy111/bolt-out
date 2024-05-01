@@ -1,8 +1,8 @@
 const gravity = 0.8;
 
 var char;
-var spawnX = 0;
-var spawnY = 0;
+var spawnX = 32;
+var spawnY = 32;
 
 var blocks = new Array(); // for collision and rendering check
 // all blocks should be referenced here and in the level array
@@ -25,6 +25,7 @@ var backgroundFrame = 0;
 
 var gameHandle;
 var buttonHandle;
+var renderHandle;
 
 class GameObject {
     constructor(src, w, h) {
@@ -65,7 +66,7 @@ class GameObject {
         ctx.drawImage(this.animationCanvas, this.x, this.y)
     }
 
- 
+
     drawHitbox(ctx) {
         ctx.strokeStyle = "red";
         ctx.strokeRect(this.x, this.y, this.w, this.h);
@@ -90,12 +91,27 @@ class Button extends GameObject {
     onPress() {
         this.animationCanvas.getContext("2d").drawImage(this.img, -this.id * (this.w + 4), -this.h - 4);
         if (this.func)
-            this.func();
+            this.func
     }
 
-    drawLevelButton(ctx) {
-        this.animationCanvas.getContext("2d").drawImage(this.img, -128, 0);
-        super.draw(ctx);
+
+}
+
+class MainMenuButton extends Button {
+    constructor(id, x, y, func) {
+        super("Images/mainButtons.png", id, x, y, 96, 110, func);
+        this.updateTexture(false);
+    }
+    onPress() {
+        this.updateTexture(true);
+        if (this.func)
+            setTimeout(this.func, 100);
+    }
+
+    updateTexture(pressed) {
+        var ctx = this.animationCanvas.getContext("2d");
+        ctx.clearRect(0, 0, 96, 110);
+        ctx.drawImage(this.img, -this.id * 128, -pressed * (this.h + 8));
     }
 }
 
@@ -106,7 +122,7 @@ class StandartTile extends GameObject {
         this.blocksIndex = blocks.push(this) - 1;
         level[x][y] = this;
         this.exposedBlocks = 0; // using this as a flag integer 0b0000 0000
-                                // bit 0 is topleft, 1-top, 2- topright, 3-left, 4-right, 5-bottomleft, 6-bottom, 7-bottomright
+        // bit 0 is topleft, 1-top, 2- topright, 3-left, 4-right, 5-bottomleft, 6-bottom, 7-bottomright
         this.texturePosition = [];
         this.initAdjacent(x, y, false);
         this.texturePosition = this.getTexturePosition();
@@ -144,7 +160,7 @@ class StandartTile extends GameObject {
     setAdjacent(position, toDelete) {
         var mask = 1 << position;
         if (toDelete) {
-            this.exposedBlocks |= mask; 
+            this.exposedBlocks |= mask;
         } else {
             this.exposedBlocks &= ~mask;
         }
@@ -232,7 +248,7 @@ class StandartTile extends GameObject {
         else if (x == 130)
             res = [6, 2];
         return res
-    }       
+    }
 
     /**
      * changes this blocks texture to 
@@ -258,7 +274,7 @@ class StandartTile extends GameObject {
             blocks[i].blocksIndex--;
         }
     }
-    
+
 }
 
 class WallTile extends StandartTile {
@@ -417,6 +433,7 @@ function init() {
 
     drawBackground(background, backgroundImage);
     buttonHandle = setInterval(drawButtons, 34, ui);
+    //renderHandle = setInterval(renderBlocks, 17, canvas);
     setInterval(drawBackground, 500, background, backgroundImage);
 }
 
@@ -478,7 +495,6 @@ function keyUpHandler(e) {
     }
 }
 function uiMouseDownHandler(e) {
-    console.log("in ui")
     for (var i = 0; i < buttons.length; i++) {
         if (buttons[i].coordsIn(e.offsetX, e.offsetY)) {
             buttons[i].onPress();
@@ -504,14 +520,11 @@ function drawMainMenu(ui) {
     var logo = document.getElementById("logo");
     var center = 1280 / 2;
     var buttonWidth = 96;
-    var buttonHeight = 110;
     ctx.drawImage(logo, (1280 - logo.width) / 2, 100);
-    var startButton = new Button("Images/mainButtons.png", 0, center - 2 * buttonWidth, 300, buttonWidth, buttonHeight, loadGame);
-    var levelBuilderButton = new Button("Images/mainButtons.png", 1, center + buttonWidth, 300, buttonWidth, buttonHeight, loadLevelMaker);
+    var startButton = new MainMenuButton(0, center - 2 * buttonWidth, 300, loadGame);
+    var levelBuilderButton = new MainMenuButton(1, center + buttonWidth, 300, loadLevelMaker);
     buttons.push(startButton);
     buttons.push(levelBuilderButton);
-    startButton.draw(ctx);
-    levelBuilderButton.drawLevelButton(ctx);
 }
 function clearUI(ui) {
     ui.getContext("2d").clearRect(0, 0, 1480, 720);
@@ -519,18 +532,21 @@ function clearUI(ui) {
 
 function loadGame() {
     buttons = new Array();
+    console.log(renderHandle);
     clearInterval(buttonHandle);
+    clearInterval(renderHandle);
+    console.log(renderHandle);
     var game = document.getElementById("game");
     var ui = document.getElementById("ui");
     clearUI(ui);
-    gameHandle = setInterval(gameLoop, 17, game); // ~60 fps
+    gameHandle = setInterval(gameLoop, 16.7, game); // ~60 fps
 }
 
 
 function loadLevelMaker() {
     var canvas = document.getElementById("game");
     canvas.addEventListener("mousedown", levelMakerMouseDownHandler);
-    var x = setInterval(renderBlocks, 17, canvas);
+    renderHandle = setInterval(renderBlocks, 17, canvas);
 }
 
 function drawBackground(background, backgroundImage) {
